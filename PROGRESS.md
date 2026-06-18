@@ -8,9 +8,14 @@
 ## 1. Đang ở đâu
 
 - **Phase hiện tại:** Phase 0 — Foundation.
-- **Increment vừa xong:** Pydantic `CreatePaymentRequest` + endpoint `POST /payments` có validation (verify: hợp lệ → 200, amount âm → 422).
-- **Increment kế tiếp:** Postgres qua Docker Compose + SQLAlchemy 2.0 async → sổ cái single-node (happy path).
-- **Lưu ý cổng:** Docker Desktop chiếm cổng 8000 → chạy app ở `--port 8080`.
+- **Increment vừa xong:** Postgres 16 chạy qua Docker Compose (`compose.yaml`), verify `SELECT version()` OK.
+- **Increment kế tiếp:** SQLAlchemy 2.0 async — nối FastAPI vào Postgres này.
+- **Cổng đã biết bị chiếm:** 8000 = container `infra-app-1` (minifeed); 5432 = container `infra-postgres-1`. Vì thế: app FastAPI ở `--port 8080`, Postgres của ta map host `5433`.
+
+### Connection facts (cho SQLAlchemy)
+- Host:port từ máy = **`localhost:5433`** · trong container = `5432`.
+- user / password / db = **`payments` / `payments` / `payments`**.
+- DSN async dự kiến: `postgresql+asyncpg://payments:payments@localhost:5433/payments`.
 - **Repo:** https://github.com/fbnb1/payment-gateway-demo (nhánh `main`).
 
 ---
@@ -29,6 +34,8 @@
 - [x] Pydantic v2: `Currency` Enum + `CreatePaymentRequest` (amount=Decimal, currency=Enum).
 - [x] Endpoint `POST /payments` dùng model → FastAPI tự validate (422 khi input sai).
 - [x] Học sâu **async**: concurrency vs parallelism, I/O- vs CPU-bound, GIL, mapping Java↔Python.
+- [x] Học nền **Docker**: image vs container, registry, port mapping, named volume.
+- [x] `compose.yaml` chạy Postgres 16 (map host 5433); gỡ port-conflict với stack "infra".
 
 ---
 
@@ -79,10 +86,10 @@
 ```
 
 ### % hoàn thành Phase 0
-**~45%** — scaffold + Git + FastAPI (`/health`, `POST /payments`) + Pydantic validation xong; còn Postgres/Docker + SQLAlchemy ledger.
+**~55%** — thêm Postgres chạy qua Docker Compose; còn SQLAlchemy async + sổ cái ghi/đọc thật.
 
 ```
-[#########···········] 45%
+[###########·········] 55%
 ```
 
 ### % đã học theo kỹ năng
@@ -92,7 +99,7 @@
 | uv / packaging Python | ~40% | đã: init, run, layout, lockfile. Còn: `uv add`, dependency groups, build/publish |
 | Python ngôn ngữ (type hints, async, Pydantic) | ~20% | đã: type hints cơ bản, Pydantic v2 (BaseModel, Field, Enum, parse+validate), mental model async/GIL. Còn: decorators, generics, Protocol, asyncio thực hành |
 | FastAPI / gRPC | ~20% | đã: app instance, `@app.get`/`@app.post`, async endpoint, body model auto-validate (422), Swagger `/docs`, `fastapi dev`. Còn: path/query params, response_model, DI, gRPC |
-| Docker / Compose | 0% | Phase 0 sau |
+| Docker / Compose | ~25% | đã: image/container, port mapping, named volume, `compose up/down/ps/logs/exec`, disk mgmt. Còn: Dockerfile build app, multi-service deps, healthcheck |
 | Kubernetes / CI-CD | 0% | Phase 1+ |
 | DDIA / distributed systems | 0% | Phase 1+ (vùng mạnh sẵn của learner) |
 

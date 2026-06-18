@@ -1,0 +1,32 @@
+# compose.yaml — môi trường dev local. Chạy: `docker compose up -d`
+# Comment để HỌC; code thật sẽ gọn hơn.
+
+services:
+  # Tên service (tuỳ đặt). Các container khác sẽ gọi DB qua đúng tên này: "postgres".
+  postgres:
+    # image: lấy Postgres v16 từ Docker Hub. GHIM version (không dùng "latest" — tái lập được.)
+    image: postgres:16
+
+    # đặt tên container cho dễ nhìn trong `docker ps`
+    container_name: payments-postgres
+
+    # environment: Postgres đọc các biến này LẦN ĐẦU để tạo user/password/db.
+    # (Dev local nên để plaintext OK; sau này secret thật sẽ tách ra .env / vault.)
+    environment:
+      POSTGRES_USER: payments
+      POSTGRES_PASSWORD: payments
+      POSTGRES_DB: payments
+
+    # ports "HOST:CONTAINER" — trái = cổng trên máy bạn, phải = cổng trong container.
+    # Dùng 5433 ở host vì 5432 đã bị container "infra-postgres-1" của project khác chiếm.
+    # Kết nối từ máy: localhost:5433  (bên trong container Postgres vẫn nghe 5432).
+    ports:
+      - "5433:5432"
+
+    # volume: ghi data vào named volume "payments_pgdata" → xoá container, data còn nguyên.
+    volumes:
+      - payments_pgdata:/var/lib/postgresql/data
+
+# khai báo named volume (Docker quản lý chỗ lưu thật, bạn không cần biết đường dẫn)
+volumes:
+  payments_pgdata:
