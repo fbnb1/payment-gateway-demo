@@ -7,7 +7,9 @@ authors = [
     { name = "laiduc95", email = "laiduc.info@gmail.com" }
 ]
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "fastapi[standard]>=0.137.1",
+]
 
 [project.scripts]
 payments = "payments:main"
