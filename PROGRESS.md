@@ -8,8 +8,8 @@
 ## 1. Đang ở đâu
 
 - **Phase hiện tại:** Phase 0 — Foundation.
-- **Increment vừa xong:** Postgres 16 chạy qua Docker Compose (`compose.yaml`), verify `SELECT version()` OK.
-- **Increment kế tiếp:** SQLAlchemy 2.0 async — nối FastAPI vào Postgres này.
+- **Increment vừa xong:** ĐÓNG VÒNG `POST /payments` → Postgres. ORM `Payment` (PK UUIDv7, `request_id` UNIQUE), DI `get_session`, INSERT + commit. Verify: 1 hàng thật trong DB.
+- **Increment kế tiếp (lựa chọn):** polish Phase 0 (xoá import thừa, response_model, test idempotency) HOẶC sang Phase 1.
 - **Cổng đã biết bị chiếm:** 8000 = container `infra-app-1` (minifeed); 5432 = container `infra-postgres-1`. Vì thế: app FastAPI ở `--port 8080`, Postgres của ta map host `5433`.
 
 ### Connection facts (cho SQLAlchemy)
@@ -36,6 +36,9 @@
 - [x] Học sâu **async**: concurrency vs parallelism, I/O- vs CPU-bound, GIL, mapping Java↔Python.
 - [x] Học nền **Docker**: image vs container, registry, port mapping, named volume.
 - [x] `compose.yaml` chạy Postgres 16 (map host 5433); gỡ port-conflict với stack "infra".
+- [x] SQLAlchemy 2.0 async: engine + `async_sessionmaker` + DI `get_session` (`db.py`).
+- [x] ORM `Payment` (`models.py`): PK **UUIDv7** (lib `uuid6`), `request_id` UNIQUE (idempotency ở DB), `amount Numeric(18,2)`, `created_at/updated_at timestamptz`.
+- [x] `POST /payments` ghi thật xuống Postgres (add + await commit); verify 1 hàng trong DB.
 
 ---
 
@@ -86,10 +89,10 @@
 ```
 
 ### % hoàn thành Phase 0
-**~55%** — thêm Postgres chạy qua Docker Compose; còn SQLAlchemy async + sổ cái ghi/đọc thật.
+**~85%** — lõi happy-path xong (API → validate → ORM → Postgres). Còn polish: xoá import thừa, response_model, vài test, (tuỳ chọn) Dockerfile cho app.
 
 ```
-[###########·········] 55%
+[#################···] 85%
 ```
 
 ### % đã học theo kỹ năng
@@ -97,7 +100,8 @@
 |---|---|---|
 | Git chuyên nghiệp | ~35% | đã: init, commit, amend, remote, force-push, unrelated histories. Còn: branching, PR, rebase workflow |
 | uv / packaging Python | ~40% | đã: init, run, layout, lockfile. Còn: `uv add`, dependency groups, build/publish |
-| Python ngôn ngữ (type hints, async, Pydantic) | ~20% | đã: type hints cơ bản, Pydantic v2 (BaseModel, Field, Enum, parse+validate), mental model async/GIL. Còn: decorators, generics, Protocol, asyncio thực hành |
+| Python ngôn ngữ (type hints, async, Pydantic) | ~30% | đã: type hints, Pydantic v2, `async with`/`await` thực hành, async generator (DI), context manager. Còn: decorators, generics, Protocol |
+| SQLAlchemy 2.0 async | ~25% | đã: engine/pool, `async_sessionmaker`, DI session, typed ORM (`Mapped`/`mapped_column`), `create_all`/`run_sync`, add+commit, UUIDv7 PK. Còn: query/select, relationship, Alembic, isolation |
 | FastAPI / gRPC | ~20% | đã: app instance, `@app.get`/`@app.post`, async endpoint, body model auto-validate (422), Swagger `/docs`, `fastapi dev`. Còn: path/query params, response_model, DI, gRPC |
 | Docker / Compose | ~25% | đã: image/container, port mapping, named volume, `compose up/down/ps/logs/exec`, disk mgmt. Còn: Dockerfile build app, multi-service deps, healthcheck |
 | Kubernetes / CI-CD | 0% | Phase 1+ |

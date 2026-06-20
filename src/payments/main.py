@@ -6,6 +6,11 @@
 #    Cú pháp `from <package> import <thứ>` ≈ `import com.x.FastAPI;` bên Java.
 from fastapi import FastAPI
 from payments.schemas import CreatePaymentRequest
+from fastapi import Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from payments.db import get_session
+from payments.models import Payment
 
 # 2) TẠO INSTANCE: tạo một object FastAPI tên là `app`.
 #    Python KHÔNG có từ khoá `new` — gọi thẳng tên class kèm `()` là tạo object.
@@ -25,6 +30,18 @@ async def health_check() -> dict[str, str]:
 
 
 @app.post("/payments")
-async def create_payment(payment: CreatePaymentRequest) -> dict[str, str]:
-
-    return {"status": "ok", "request_id": payment.request_id}
+async def create_payment(
+    payment: CreatePaymentRequest,
+    session: AsyncSession = Depends(get_session),
+) -> dict[str, str]:
+    record = Payment(
+        request_id=payment.request_id,
+        payer_id=payment.payer_id,
+        service_id=payment.service_id,
+        amount=payment.amount,
+        currency=payment.currency.value,
+        status="PENDING",
+    )
+    session.add(record)  # stage INSERT (unit of work)
+    await session.commit()  # FLUSH + COMMIT — nhớ bài học ROLLBACK: không commit là mất
+    return {"id": str(record.id), "status": record.status}
