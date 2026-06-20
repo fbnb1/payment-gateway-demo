@@ -8,8 +8,13 @@
 ## 1. Đang ở đâu
 
 - **Phase hiện tại:** Phase 0 — Foundation.
-- **Increment vừa xong:** ĐÓNG VÒNG `POST /payments` → Postgres. ORM `Payment` (PK UUIDv7, `request_id` UNIQUE), DI `get_session`, INSERT + commit. Verify: 1 hàng thật trong DB.
-- **Increment kế tiếp (lựa chọn):** polish Phase 0 (xoá import thừa, response_model, test idempotency) HOẶC sang Phase 1.
+- **Increment vừa xong:** verify UNIQUE constraint khai hỏa (gửi `r1` lần 2 → 500 `IntegrityError`, idempotency ở DB); dọn import thừa; commit `f8c2e4e`.
+- **▶ RESUME HERE (phiên sau):** (1) ĐỌC **DDIA Ch.7 Transactions** trước — Phase 1 chính là chương này viết thành code. (2) Vào **Phase 1 — Ledger correctness** (isolation, write skew, `SELECT FOR UPDATE`, + CI GitHub Actions, testcontainers).
+- **Polish Phase 0 còn nợ (nhẹ, làm lúc nào cũng được):** `response_model` cho output, biến 500→409 cho duplicate, 1 test pytest đầu tiên.
+
+### Trạng thái đọc DDIA
+- Đã đọc hết **Ch.6 Partitioning (sharding)**. **Chưa** đọc Ch.7 Transactions → đọc TRƯỚC Phase 1.
+- Lưu ý numbering: Ch.6=Partitioning, **Ch.7=Transactions**, Ch.8=Distributed troubles (để Phase 4), Ch.9=Consensus (Phase 4).
 - **Cổng đã biết bị chiếm:** 8000 = container `infra-app-1` (minifeed); 5432 = container `infra-postgres-1`. Vì thế: app FastAPI ở `--port 8080`, Postgres của ta map host `5433`.
 
 ### Connection facts (cho SQLAlchemy)
@@ -89,10 +94,10 @@
 ```
 
 ### % hoàn thành Phase 0
-**~85%** — lõi happy-path xong (API → validate → ORM → Postgres). Còn polish: xoá import thừa, response_model, vài test, (tuỳ chọn) Dockerfile cho app.
+**~90%** — lõi happy-path xong + verify idempotency constraint. Còn polish: response_model, 500→409, vài test, (tuỳ chọn) Dockerfile cho app.
 
 ```
-[#################···] 85%
+[##################··] 90%
 ```
 
 ### % đã học theo kỹ năng

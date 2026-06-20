@@ -2,7 +2,7 @@
 # Pydantic v2 schemas cho Payments API.
 # Field `amount` đã viết sẵn làm MẪU. Bạn điền 4 chỗ TODO theo đúng kiểu mẫu đó.
 
-from pydantic_core.core_schema import nullable_schema
+
 from decimal import Decimal
 from enum import Enum
 
