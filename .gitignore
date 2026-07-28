@@ -11,6 +11,11 @@ __pycache__/
 .env
 .env.*
 
+# Java / Maven
+target/
+*.class
+!.mvn/wrapper/maven-wrapper.jar
+
 # Tooling
 .coverage
 htmlcov/
