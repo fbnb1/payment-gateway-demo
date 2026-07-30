@@ -25,6 +25,7 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 | 03 | [Classloader & Reflection](03-classloader-reflection.md) | bytecode · classloader · lazy loading · metaspace · reflection · **cách Spring thật sự hoạt động** · phá `private` · cái giá của reflection |
 | 04 | [Dependency Injection](04-dependency-injection.md) | dependency là gì · 3 kiểu inject · **4 lý do constructor thắng** · khi nào bỏ được `@Autowired` |
 | 05 | [Stateless & Thread Safety](05-stateless-thread-safety.md) | state là gì · singleton + nhiều thread = race condition · dữ liệu request để đâu · quy tắc `final` |
+| 06 | [Git chuyên nghiệp](06-git-professional.md) | Conventional Commits · atomic commit · Git Flow vs GitHub Flow vs Trunk-Based · merge vs rebase · tag + SemVer · `reset` vs `revert` · `reflog` · `bisect` · branch protection · hooks · release tự động |
 
 ---
 
