@@ -26,6 +26,7 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 | 04 | [Dependency Injection](04-dependency-injection.md) | dependency là gì · 3 kiểu inject · **4 lý do constructor thắng** · khi nào bỏ được `@Autowired` |
 | 05 | [Stateless & Thread Safety](05-stateless-thread-safety.md) | state là gì · singleton + nhiều thread = race condition · dữ liệu request để đâu · quy tắc `final` |
 | 06 | [Git chuyên nghiệp](06-git-professional.md) | Conventional Commits · atomic commit · Git Flow vs GitHub Flow vs Trunk-Based · merge vs rebase · tag + SemVer · `reset` vs `revert` · `reflog` · `bisect` · branch protection · hooks · release tự động |
+| 07 | [Auto-configuration](07-spring-boot-autoconfiguration.md) | 1 class → 145 bean · 2 tầng lọc · `AutoConfiguration.imports` · họ `@Conditional...` · **auto-config tự lùi bước** · starter · transitive dependency + `dependency:tree` · eager vs lazy + fail-fast · đọc CONDITIONS EVALUATION REPORT · daemon vs non-daemon thread |
 
 ---
 
@@ -52,7 +53,6 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 - Các scope khác: `prototype`, `request`, `session`
 - `@Qualifier` / `@Primary` / circular dependency
 - Hợp đồng `equals` / `hashCode` · `Integer` cache −128..127
-- `@EnableAutoConfiguration` hoạt động ra sao *(topic lấp lỗ hổng tuần này)*
 - Collections internals: `HashMap` bên trong là gì
 - `synchronized` · `volatile` · Java Memory Model · `ThreadLocal` · virtual threads
 
