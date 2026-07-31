@@ -121,11 +121,62 @@ Field injection thì field `private`, **không gán vào được** — trừ kh
 
 ---
 
-## 6. Chi tiết hay bị hỏi
+## 6. `@Autowired` và `final` KHÔNG liên quan gì đến nhau
 
-> Nếu class chỉ có **đúng một** constructor thì **không cần viết `@Autowired`** — Spring tự hiểu.
+Hiểu nhầm rất phổ biến: tưởng có `final` rồi nên bỏ được `@Autowired`. **Sai.** Hai thứ này độc lập hoàn toàn — cả bốn tổ hợp đều hợp lệ.
 
-Đó là lý do code Spring hiện đại gần như không còn thấy `@Autowired`.
+| | Nói với ai | Trả lời câu hỏi gì | Tác dụng lúc nào |
+|---|---|---|---|
+| **`@Autowired`** | **Spring** | *"Dùng constructor nào để tạo object này?"* | lúc **chạy** |
+| **`final`** | **Compiler** | *"Biến này gán một lần, cấm đổi."* | lúc **biên dịch** |
+
+Một cái là lời nhắn cho framework, một cái là luật cho trình biên dịch.
+
+### Quy tắc thật để bỏ được `@Autowired`
+
+> **Class chỉ có ĐÚNG MỘT constructor → Spring tự dùng constructor đó, không cần annotation.**
+> (từ Spring 4.3, ~2016)
+
+> Ví von: giao hàng đến căn nhà **chỉ có một cửa** — không ai cần dán bảng "vào cửa này".
+
+Nhà **hai cửa** thì bắt buộc phải chỉ:
+
+```java
+@Service
+public class PaymentService {
+
+    public PaymentService() { ... }                        // cửa 1
+
+    @Autowired                                             // ← BẮT BUỘC
+    public PaymentService(PaymentRepository repo) { ... }  // cửa 2
+}
+```
+
+Hai constructor mà không đánh dấu → Spring **chết lúc khởi động**.
+
+*(Ghi chú: constructor thứ hai buộc phải bỏ `final`, vì `final` bắt **mọi** constructor phải gán giá trị. Đó là bằng chứng ngược lại rằng hai thứ độc lập — `final` ràng buộc compiler, còn Spring thì vẫn chỉ đang phân vân chọn cửa.)*
+
+---
+
+## 7. `@Component` vs `@Service` vs `@Repository`
+
+**`@Service` ≡ `@Component` về mặt kỹ thuật.** `@Service` được meta-annotate bằng `@Component`; đổi qua lại chương trình chạy y nguyên.
+
+Vẫn nên viết `@Service` vì:
+
+1. **Truyền đạt vai trò** — người đọc biết ngay đây là tầng nghiệp vụ.
+2. **AOP nhắm được** — pointcut kiểu "log mọi method trong mọi `@Service`"; nếu tất cả là `@Component` thì không phân biệt nổi.
+3. **Spring để ngỏ khả năng thêm ý nghĩa** trong tương lai (tài liệu nói rõ).
+
+### ⚠️ Nhưng `@Repository` thì KHÁC THẬT
+
+`@Repository` có **hành vi thực sự**: Spring bọc bean đó lại để **dịch exception** — biến `SQLException` (JDBC) hay exception của JPA thành hệ `DataAccessException` thống nhất. Nhờ vậy tầng nghiệp vụ không cần biết bên dưới là JDBC hay Hibernate.
+
+> **Câu phỏng vấn:** *"ba annotation này khác nhau gì?"*
+> Rất nhiều người trả lời "giống nhau, chỉ khác tên" → **sai**.
+> Đáp án đúng: `@Service` ≡ `@Component`; **`@Repository` thì không** — nó thêm exception translation.
+
+*(Cơ chế "bọc bean lại" đó chính là **proxy** — xem hàng đợi trong [README](README.md).)*
 
 ---
 
@@ -135,9 +186,12 @@ Field injection thì field `private`, **không gán vào được** — trừ kh
 2. Ba kiểu injection, khác nhau ra sao?
 3. Vì sao constructor injection được khuyến nghị? → *4 lý do ở mục 5*
 4. Vì sao field injection không dùng được `final`?
-5. Khi nào không cần `@Autowired`? → *khi class chỉ có một constructor*
+5. Khi nào không cần `@Autowired`? → *khi class chỉ có **một** constructor — **không** liên quan tới `final`*
 6. Spring inject bằng cơ chế kỹ thuật nào? → *reflection*
 7. Setter injection dùng khi nào? → *dependency không bắt buộc / cần thay đổi sau khi tạo*
+8. `@Autowired` và `final` thay thế nhau được không? → *không, hoàn toàn độc lập: một nói với Spring lúc chạy, một nói với compiler lúc biên dịch*
+9. Class có 2 constructor mà không đánh dấu gì thì sao? → *Spring chết lúc khởi động, không biết chọn cái nào*
+10. `@Component`, `@Service`, `@Repository` khác nhau gì? → *`@Service` ≡ `@Component`; **`@Repository` khác thật** — có exception translation*
 
 ## Còn nợ / sẽ học sau
 
