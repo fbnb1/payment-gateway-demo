@@ -27,6 +27,7 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 | 05 | [Stateless & Thread Safety](05-stateless-thread-safety.md) | state là gì · singleton + nhiều thread = race condition · dữ liệu request để đâu · quy tắc `final` |
 | 06 | [Git chuyên nghiệp](06-git-professional.md) | Conventional Commits · atomic commit · Git Flow vs GitHub Flow vs Trunk-Based · merge vs rebase · tag + SemVer · `reset` vs `revert` · `reflog` · `bisect` · branch protection · hooks · release tự động |
 | 07 | [Auto-configuration](07-spring-boot-autoconfiguration.md) | 1 class → 145 bean · 2 tầng lọc · `AutoConfiguration.imports` · họ `@Conditional...` · **auto-config tự lùi bước** · starter · transitive dependency + `dependency:tree` · eager vs lazy + fail-fast · đọc CONDITIONS EVALUATION REPORT · daemon vs non-daemon thread |
+| 08 | [Java `record`](08-java-records.md) | transparent carrier · compiler sinh gì · accessor `amount()` vs `getAmount()` · compact constructor · **có thay thế DTO không** · vì sao KHÔNG làm JPA entity · Jackson · Bean Validation · record ≠ bean |
 
 ---
 
