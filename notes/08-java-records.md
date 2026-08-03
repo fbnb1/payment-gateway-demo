@@ -161,6 +161,76 @@ public record Money(BigDecimal amount, String currency) implements Comparable<Mo
 
 ---
 
+## 5b. Cần một object trạng thái đi qua nhiều bước thì sao?
+
+Câu hỏi thực tế: *"một transaction đi qua nhiều bước, mỗi bước ghi thêm vài field — record có làm được không?"*
+
+**Sửa tại chỗ thì không.** Nhưng có cách khác, dựa đúng vào [note 01](01-jvm-memory-model.md).
+
+### "Object bất biến" ≠ "biến không đổi được"
+
+```java
+var ctx = new PaymentContext(id, amount, "CREATED", null);
+ctx = ctx.withStatus("VALIDATED");     // ← HỢP LỆ
+```
+
+Record cấm sửa **object**. Nó **không** cấm biến trỏ sang object khác.
+
+```
+   ctx = ctx.withStatus("VALIDATED")
+
+        ┌──────────┐        ┌─────────────────────┐
+        │ ctx      │    ┌─► │ status = "CREATED"  │ ← object cũ, KHÔNG bị sửa
+        └────┬─────┘    │   └─────────────────────┘
+             │          └── (hết người trỏ tới → GC dọn)
+             │              ┌──────────────────────┐
+             └────────────► │ status = "VALIDATED" │ ← object MỚI
+                            └──────────────────────┘
+```
+
+### Wither pattern
+
+```java
+public record PaymentContext(String id, BigDecimal amount, String status, String authCode) {
+
+    public PaymentContext withStatus(String status) {
+        return new PaymentContext(id, amount, status, authCode);
+    }
+
+    public PaymentContext withAuthCode(String authCode) {
+        return new PaymentContext(id, amount, status, authCode);
+    }
+}
+```
+
+```java
+var ctx = new PaymentContext(id, amount, "CREATED", null);
+ctx = ctx.withStatus("VALIDATED");
+ctx = ctx.withAuthCode("AUTH123").withStatus("AUTHORIZED");
+```
+
+Quy ước tên `withXxx()` — gọi là **wither**, đối xứng với setter.
+
+### Ba lựa chọn
+
+| | Ưu | Nhược |
+|---|---|---|
+| **(A) `class` + setter** | đơn giản, không cấp phát thêm | không biết ai sửa gì; nguy hiểm khi chia sẻ giữa thread; giá trị cũ **mất vĩnh viễn** |
+| **(B) `record` + wither** | bất biến, an toàn đa luồng, **giữ được trạng thái từng bước** | nhiều field thì viết lặp; mỗi bước cấp phát một object (rẻ nhưng khác 0) |
+| **(C) builder → record** | trong thì tiện, ra thì bất biến | thêm một class phải bảo trì |
+
+### Với payment thì nghiêng về (B)
+
+`CREATED → VALIDATED → AUTHORIZED → CAPTURED`, mỗi bước một object mới ⇒ có sẵn **chuỗi trạng thái đầy đủ, không bị ghi đè**. Điều tra giao dịch lỗi thì mọi bước còn nguyên.
+
+Cách (A) thì `ctx.setStatus("AUTHORIZED")` **xoá vĩnh viễn** giá trị cũ.
+
+> 🌱 Đây chính là hạt giống của **Event Sourcing (Phase 3)**: thay vì ghi đè trạng thái, lưu chuỗi thay đổi.
+
+**Vẫn chọn (A) khi:** object có 15–20 field, hoặc nằm trong vòng lặp nóng chạy hàng triệu lần.
+
+---
+
 ## 6. Record với Jackson
 
 Hoạt động sẵn, không cần cấu hình. Jackson dùng **tên thành phần** làm tên field JSON.
