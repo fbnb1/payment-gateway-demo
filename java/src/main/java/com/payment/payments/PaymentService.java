@@ -26,4 +26,9 @@ public class PaymentService {
         this.create(request);            // ← this = object THẬT, không phải proxy
         return this.create(request);     // ← this = object THẬT, không phải proxy
     }
+
+    /** Dùng để in ra chuỗi proxy. Object thật là điểm cuối cùng của chuỗi. */
+    public String chain() {
+        return "PaymentService (OBJECT THAT)";
+    }
 }

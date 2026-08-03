@@ -33,4 +33,9 @@ public class PaymentServiceLoggingProxy extends PaymentService {
     public PaymentResponse createTwice(PaymentRequest request) {
         return target.createTwice(request);   // chuyển thẳng vào object thật, không chặn gì
     }
+
+    @Override
+    public String chain() {
+        return getClass().getSimpleName() + "  ->  " + target.chain();
+    }
 }

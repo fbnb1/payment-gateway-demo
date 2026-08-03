@@ -17,7 +17,10 @@ public class ProxyDemoConfig {
 
     @Bean
     public PaymentService paymentService(CallStats stats) {
-        PaymentService real = new PaymentService(stats);              // object thật
-        return new PaymentServiceLoggingProxy(real, stats);           // ← cất PROXY vào container
+        PaymentService real = new PaymentService(stats);              // lõi
+        PaymentService logging = new PaymentServiceLoggingProxy(real, stats);   // lớp trong
+        PaymentService timing = new PaymentServiceTimingProxy(logging, stats);  // lớp ngoài
+
+        return timing;   // ← container nhận LỚP NGOÀI CÙNG. Hai lớp kia ẩn bên trong.
     }
 }

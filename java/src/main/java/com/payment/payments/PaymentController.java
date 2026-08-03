@@ -42,6 +42,12 @@ public class PaymentController {
         return paymentService.getClass().getName();
     }
 
+    /** Toàn bộ chuỗi proxy, từ lớp ngoài cùng vào tới object thật. */
+    @GetMapping("/payments/chain")
+    public String chain() {
+        return paymentService.chain();
+    }
+
     @PostMapping("/payments/stats/reset")
     public StatsSnapshot resetStats() {
         stats.reset();
