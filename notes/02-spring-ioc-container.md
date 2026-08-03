@@ -4,30 +4,90 @@
 
 ---
 
-## 1. IoC là gì
+## Tóm tắt 30 giây
+
+1. Tự gọi `new` để tạo dependency → code bị dính chặt, khó test, dễ tạo trùng object.
+2. **IoC** = đưa việc gọi `new` ra khỏi class của bạn, giao cho framework. Class chỉ **khai báo mình cần gì**.
+3. **DI** = *cách* framework đưa dependency vào (thường qua constructor).
+4. Cái framework đó tên là **ApplicationContext**, và ruột nó chỉ là một `Map<String, Object>`.
+5. Mỗi object trong map đó gọi là một **bean**. Vì là `map.get()` chứ không phải `new`, nên mọi nơi xin đều nhận **cùng một object** → đó chính là **singleton scope**.
+
+Phần còn lại của note chỉ là mở rộng 5 dòng trên.
+
+---
+
+## 1. Bắt đầu từ nỗi đau, không phải từ định nghĩa
+
+Code không có IoC, tự `new` bằng tay:
+
+```java
+class PaymentController {
+    private final PaymentService service = new PaymentService(
+        new PaymentRepository(new DataSource("jdbc:...", "user", "pass"))
+    );
+}
+```
+
+Ba vấn đề, và đều là vấn đề thật trong hệ thống payment:
+
+| Vấn đề | Vì sao đau |
+|---|---|
+| **Biết quá nhiều** | `PaymentController` phải biết `DataSource` cần URL + password. Đó không phải việc của nó. |
+| **Không test được** | Muốn thay `PaymentRepository` bằng mock → không thay được, vì `new` đã hard-code trong class. |
+| **Tạo trùng** | 10 controller cùng `new DataSource` → 10 connection pool, 10 lần mở kết nối DB. |
+
+Ghi nhớ: **`new` là một lời cam kết cứng.** Viết `new X()` nghĩa là "tôi chốt luôn, mãi mãi dùng đúng class X này". Mọi vấn đề trên đều sinh ra từ đó.
+
+---
+
+## 2. Ý tưởng IoC — chỉ đảo một thứ duy nhất
 
 **IoC — Inversion of Control (đảo ngược quyền điều khiển).**
 
-- Bình thường: code của bạn kiểm soát việc tạo dependency → bạn gọi `new`.
-- Đảo ngược: **framework tạo, rồi đưa cho bạn.**
+- Bình thường: **code của bạn** gọi `new` để lấy dependency.
+- Đảo ngược: **framework** gọi `new`, rồi đưa cho bạn.
 
-**DI — Dependency Injection** là *cách thực hiện* IoC, **không phải từ đồng nghĩa**. Phỏng vấn hay bắt lỗi chỗ này.
+Chữ "đảo ngược" chỉ nói về **ai là người gọi `new`**. Không huyền bí hơn thế.
 
-> **Neo:** connection pool. Bạn chưa bao giờ viết `new Connection()` — bạn *xin* từ pool. Pool quyết định tạo bao nhiêu, khi nào, tái sử dụng ra sao. Spring là đúng ý tưởng đó, áp lên chính các object của bạn.
+```
+TRƯỚC (không IoC)              SAU (có IoC)
+────────────────────           ──────────────────────────
+Controller                     Controller
+   │ new Service()                │ "tôi cần một Service"
+   │ new Repository()             ▼
+   ▼                           Container  ──► new Service(...)
+tự lo hết                                 ──► đưa vào Controller
+```
+
+> **Neo về nghề của bạn:** connection pool. Bạn chưa bao giờ viết `new Connection()` — bạn *xin* từ pool. Pool quyết định tạo bao nhiêu, khi nào, tái sử dụng ra sao. Spring là đúng ý tưởng đó, nhưng áp lên **mọi object** của bạn chứ không riêng connection.
+
+### IoC ≠ DI
+
+**DI — Dependency Injection** là **cách thực hiện** IoC, **không phải từ đồng nghĩa**.
+
+- IoC = **nguyên tắc** ("framework nắm quyền tạo object").
+- DI = **kỹ thuật cụ thể** ("truyền dependency vào qua constructor / setter / field").
+
+Phỏng vấn hay bắt lỗi đúng chỗ này. Chi tiết về DI ở [note 04](04-dependency-injection.md).
 
 ---
 
-## 2. Ba thuật ngữ
+## 3. Ba từ vựng — quy về một ví von
 
-| Thuật ngữ | Định nghĩa chuẩn |
-|---|---|
-| **Bean** | Một object mà **vòng đời do container quản lý**. Không phải loại class đặc biệt, không cần implement gì cả. |
-| **ApplicationContext** | Chính **cái container**. Bên trong là map `tên bean → definition → instance`. |
-| **Bean definition** | Cái **công thức**, không phải cái bánh: class nào, scope gì, cần dependency nào. |
+| Từ | Ví von cái bếp | Nghĩa kỹ thuật |
+|---|---|---|
+| **Bean definition** | **công thức** món ăn | Metadata: class nào, scope gì, cần dependency nào. Chưa có object. |
+| **Bean** | **món ăn đã nấu xong** | Object thật trong heap, **vòng đời do container quản lý**. |
+| **ApplicationContext** | **cái bếp + tủ giữ món** | Chính cái container. Bên trong là map `tên bean → object`. |
+
+Hai điều dễ nhầm, nhớ kỹ:
+
+- **Bean không phải một loại class đặc biệt.** Không cần `extends` gì, không cần `implements` gì. Class của bạn y nguyên; "bean" chỉ mô tả *ai đang quản nó*.
+- **Bean definition ≠ bean.** Công thức không ăn được. Phân biệt được hai cái này thì phần "hai pha" bên dưới tự hiểu.
 
 ---
 
-## 3. Container chỉ là một cái Map — không có ma thuật
+## 4. Container chỉ là một cái Map — không có ma thuật
 
 Bạn tự viết được container tối giản trong 12 dòng:
 
@@ -45,15 +105,15 @@ class MiniContainer {
 }
 ```
 
-`getBean` chỉ `get` từ map — nó **không** `new`. Nên gọi bao nhiêu lần cũng trả về **đúng một địa chỉ**.
+Điểm mấu chốt: **`getBean` chỉ `get` từ map — nó KHÔNG `new`.** Gọi bao nhiêu lần cũng trả về đúng một địa chỉ trong heap.
 
-Spring làm y hệt. Lớp thật tên `DefaultSingletonBeanRegistry`, có field:
+Spring làm y hệt. Class thật tên `DefaultSingletonBeanRegistry`, có field:
 
 ```java
 private final Map<String, Object> singletonObjects = new ConcurrentHashMap<>(256);
 ```
 
-Dòng đó có thật trong source Spring — mở ra đọc được.
+Dòng đó có thật trong source Spring — mở ra đọc được. Cả framework đồ sộ, phần lõi của "IoC container" đúng là một cái map.
 
 ### Toàn cảnh trong heap
 
@@ -78,23 +138,29 @@ Dòng đó có thật trong source Spring — mở ra đọc được.
 
 ---
 
-## 4. Spring khởi động theo HAI PHA
+## 5. Spring khởi động theo HAI PHA
 
-| Pha | Spring làm gì |
-|---|---|
-| **1. Registration** | Quét, đọc, đăng ký **toàn bộ** *bean definition*. Map còn **rỗng** — chưa object nào. |
-| **2. Instantiation** | Gọi `new`, inject dependency, **post-process** từng bean, rồi `map.put(name, object)`. |
+Quay lại ví von cái bếp: **đọc hết công thức trước, rồi mới nấu.**
 
-- `getBeanDefinitionNames()` đọc danh sách của **pha 1** — danh sách *công thức*, chú ý chữ **Definition**.
-- Chữ **post-process** ở pha 2 là chỗ **proxy** được tạo → nền cho `@Transactional`. *(sẽ có note riêng)*
+| Pha | Spring làm gì | Trạng thái map |
+|---|---|---|
+| **1. Registration** | Quét package, đọc annotation, đăng ký **toàn bộ** *bean definition* | **Rỗng** — chưa object nào |
+| **2. Instantiation** | Gọi `new`, inject dependency, **post-process**, rồi `map.put(name, object)` | Được lấp đầy |
+
+Vì sao phải tách hai pha? Vì lúc tạo `PaymentController`, Spring cần biết `PaymentService` **tồn tại** — mà chưa chắc đã tạo nó xong. Đọc hết công thức trước thì mới xếp được thứ tự nấu.
+
+Hai chi tiết đáng nhớ:
+
+- `getBeanDefinitionNames()` đọc danh sách của **pha 1** — danh sách *công thức*. Chú ý chữ **Definition** trong tên method.
+- Chữ **post-process** ở pha 2 là chỗ **proxy** được tạo → đây là nền móng của `@Transactional`, `@Async`, `@Cacheable`. *(sẽ có note riêng)*
 
 ---
 
-## 5. Khai báo bean — hai cách
+## 6. Khai báo bean — hai cách, một quy tắc chọn
 
-### Ngầm — `@Component` + component scanning
+### Cách 1 — ngầm: `@Component` + component scanning
 
-Dùng khi class là **của bạn**.
+Dùng khi class là **của bạn** (bạn sửa được source để gắn annotation).
 
 ```java
 @Service        // ← đây là một lời khai báo bean
@@ -103,21 +169,33 @@ Dùng khi class là **của bạn**.
 @RestController // ← bean
 ```
 
-Cả bốn **đều là** `@Component`, chỉ đặt tên theo vai trò.
-Riêng `@Repository` có thêm tác dụng thật: dịch exception của JDBC/JPA sang hệ exception của Spring.
+Cả bốn **đều là** `@Component`, chỉ đổi tên theo vai trò để người đọc code hiểu ý đồ.
+Ngoại lệ duy nhất: `@Repository` có thêm tác dụng thật — dịch exception của JDBC/JPA sang hệ exception của Spring.
 
-### Tường minh — method `@Bean` trong class `@Configuration`
+### Cách 2 — tường minh: method `@Bean` trong class `@Configuration`
 
-Dùng khi object là **của thư viện bên thứ ba** — bạn không sửa source được để gắn annotation.
+Dùng khi object là **của thư viện bên thứ ba** — bạn không sửa được source của nó để gắn `@Component`.
+
+```java
+@Configuration
+class AppConfig {
+    @Bean
+    ObjectMapper objectMapper() {          // class của Jackson, không phải của bạn
+        return new ObjectMapper().findAndRegisterModules();
+    }
+}
+```
+
+Ở đây bạn **tự gọi `new`** — nhưng object trả về được **giao cho container quản**. Vẫn là IoC, vì quyền quyết định "tạo lúc nào, giữ bao lâu, đưa cho ai" nằm ở Spring.
 
 > **Câu phỏng vấn kinh điển:** *"khi nào dùng `@Component`, khi nào dùng `@Bean`?"*
-> → `@Component` cho class của mình; `@Bean` cho class của bên thứ ba.
+> → `@Component` cho class của mình; `@Bean` cho class của bên thứ ba (hoặc khi cần cấu hình phức tạp trước khi giao).
 
 ---
 
-## 6. Vì sao class `main` cũng là bean?
+## 7. Vì sao class `main` cũng là một bean?
 
-`@SpringBootApplication` là **annotation gộp**:
+`@SpringBootApplication` là **annotation gộp** — bóc ra thì thấy:
 
 ```
 @SpringBootApplication
@@ -126,7 +204,7 @@ Dùng khi object là **của thư viện bên thứ ba** — bạn không sửa 
  └── @ComponentScan                                               ← quét package tìm @Component khác
 ```
 
-Chuỗi `@SpringBootApplication → @SpringBootConfiguration → @Configuration → @Component` đáng thuộc lòng.
+Chuỗi `@SpringBootApplication → @SpringBootConfiguration → @Configuration → @Component` đáng thuộc lòng — đó là toàn bộ câu trả lời cho câu hỏi này.
 
 Tên bean = tên class viết thường chữ đầu → `paymentsApplication`.
 
@@ -142,9 +220,11 @@ Ghi nhớ: `ApplicationContext` thuộc `org.springframework.context` — **củ
 
 ---
 
-## 7. Singleton scope
+## 8. Singleton scope
 
 > **Singleton scope** = container tạo **đúng một object** trong heap cho bean đó, rồi **phát cùng một reference** cho mọi nơi xin nó.
+
+Đây không phải một tính năng phải bật — nó là **hệ quả tự nhiên** của việc `getBean` chỉ gọi `map.get()` (mục 4). Muốn có object mới mỗi lần thì mới phải khai báo thêm (`prototype` scope).
 
 ```java
 var a = ctx.getBean(PaymentsApplication.class);   // map.get → 0x2000
@@ -162,14 +242,14 @@ var b = ctx.getBean(PaymentsApplication.class);   // map.get → 0x2000
    hai biến trong stack        MỘT object trong heap
 ```
 
-Dùng `==` chứ không `.equals()` — vì ta hỏi *"cùng ô nhớ không"*, không hỏi *"giá trị bằng nhau không"*. Xem [01](01-jvm-memory-model.md).
+Dùng `==` chứ không `.equals()` — vì ta hỏi *"cùng ô nhớ không"*, không hỏi *"giá trị bằng nhau không"*. Xem [note 01](01-jvm-memory-model.md).
 
 ### Hai cái bẫy
 
-**Bẫy 1 — "mỗi ApplicationContext", KHÔNG phải "mỗi JVM".**
-Hai context trong cùng một JVM → hai object riêng.
+**Bẫy 1 — "một" tính theo mỗi ApplicationContext, KHÔNG phải mỗi JVM.**
+Hai context trong cùng một JVM → hai object riêng biệt. Hay gặp trong integration test: mỗi test class có thể dựng một context khác nhau.
 
-**Bẫy 2 — Spring singleton ≠ Singleton pattern (GoF).**
+**Bẫy 2 — Spring singleton ≠ Singleton pattern (GoF).** Trùng tên, khác hẳn bản chất:
 
 | | Singleton pattern (GoF) | Spring singleton scope |
 |---|---|---|
@@ -178,19 +258,25 @@ Hai context trong cùng một JVM → hai object riêng.
 | Tạo được cái thứ hai? | Không (trừ reflection) | **Được** — `new PaymentsApplication()` vẫn chạy |
 | Mock khi test | Khó (trạng thái toàn cục) | Dễ (nạp bean khác vào context) |
 
-Dòng thứ ba hay làm người ta trượt: Spring **không cấm** bạn `new`. Nó chỉ đảm bảo **object nó quản lý** thì chỉ có một. Object bạn tự `new` nằm ngoài container, không được inject gì cả.
+Dòng thứ ba hay làm người ta trượt: Spring **không cấm** bạn `new`. Nó chỉ đảm bảo **object nó quản lý** thì chỉ có một. Object bạn tự `new` nằm **ngoài** container → không được inject gì cả, mọi field dependency đều `null`.
+
+### Hệ quả nguy hiểm — nhớ ngay bây giờ
+
+Một object dùng chung cho **mọi request**, mà web server thì chạy **nhiều thread**. Nghĩa là: nếu bean có field thay đổi được, hai request sẽ ghi đè lẫn nhau. Đó là lý do bean phải **stateless** → [note 05](05-stateless-thread-safety.md).
 
 ---
 
 ## Câu hỏi phỏng vấn từ phần này
 
-1. IoC và DI khác nhau thế nào? → *IoC là nguyên tắc, DI là cách thực hiện*
-2. Bean là gì? → *object có vòng đời do container quản lý*
-3. `@Component` vs `@Bean` dùng khi nào?
-4. Vì sao class gắn `@SpringBootApplication` cũng là bean? → *chuỗi annotation gộp dẫn về `@Component`*
-5. Scope mặc định là gì, phạm vi "một" tính theo gì? → *singleton, mỗi ApplicationContext*
-6. Spring singleton có giống Singleton pattern không? → *không*
-7. Spring khởi động qua mấy pha? → *registration definition, rồi instantiation + post-process*
+1. IoC giải quyết vấn đề gì? → *code tự `new` thì dính chặt, khó test, dễ tạo trùng object*
+2. IoC và DI khác nhau thế nào? → *IoC là nguyên tắc, DI là cách thực hiện*
+3. Bean là gì? → *object có vòng đời do container quản lý*
+4. Bean và bean definition khác nhau ra sao? → *món ăn vs công thức*
+5. `@Component` vs `@Bean` dùng khi nào?
+6. Vì sao class gắn `@SpringBootApplication` cũng là bean? → *chuỗi annotation gộp dẫn về `@Component`*
+7. Scope mặc định là gì, phạm vi "một" tính theo gì? → *singleton, mỗi ApplicationContext*
+8. Spring singleton có giống Singleton pattern không? → *không — bảng so sánh ở mục 8*
+9. Spring khởi động qua mấy pha? → *registration definition, rồi instantiation + post-process*
 
 ## Còn nợ / sẽ học sau
 
@@ -203,3 +289,4 @@ Dòng thứ ba hay làm người ta trượt: Spring **không cấm** bạn `new
 - [03-classloader-reflection.md](03-classloader-reflection.md) — cơ chế thật giúp Spring tạo được object của bạn
 - [04-dependency-injection.md](04-dependency-injection.md) — cách container đưa dependency vào
 - [05-stateless-thread-safety.md](05-stateless-thread-safety.md) — hệ quả nguy hiểm của singleton
+- [07-spring-boot-autoconfiguration.md](07-spring-boot-autoconfiguration.md) — vì sao một class sinh ra 145 bean

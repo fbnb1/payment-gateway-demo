@@ -21,13 +21,14 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 | # | File | Nội dung chính |
 |---|---|---|
 | 01 | [JVM Memory Model](01-jvm-memory-model.md) | stack vs heap vs metaspace · GC · biến ≠ object · `==` vs `.equals()` · `null` · String pool |
-| 02 | [Spring IoC Container](02-spring-ioc-container.md) | IoC vs DI · bean · ApplicationContext · container chỉ là một `Map` · 2 pha khởi động · `@Component` vs `@Bean` · `@SpringBootApplication` · singleton scope · Spring singleton ≠ GoF singleton |
+| 02 | [Spring IoC Container](02-spring-ioc-container.md) | **vì sao cần IoC (3 nỗi đau của `new`)** · IoC vs DI · bean vs bean definition · ApplicationContext · container chỉ là một `Map` · 2 pha khởi động · `@Component` vs `@Bean` · `@SpringBootApplication` · singleton scope · Spring singleton ≠ GoF singleton |
 | 03 | [Classloader & Reflection](03-classloader-reflection.md) | bytecode · classloader · lazy loading · metaspace · reflection · **cách Spring thật sự hoạt động** · phá `private` · cái giá của reflection |
 | 04 | [Dependency Injection](04-dependency-injection.md) | dependency là gì · 3 kiểu inject · **4 lý do constructor thắng** · khi nào bỏ được `@Autowired` |
 | 05 | [Stateless & Thread Safety](05-stateless-thread-safety.md) | state là gì · singleton + nhiều thread = race condition · dữ liệu request để đâu · quy tắc `final` |
 | 06 | [Git chuyên nghiệp](06-git-professional.md) | Conventional Commits · atomic commit · Git Flow vs GitHub Flow vs Trunk-Based · merge vs rebase · tag + SemVer · `reset` vs `revert` · `reflog` · `bisect` · branch protection · hooks · release tự động |
 | 07 | [Auto-configuration](07-spring-boot-autoconfiguration.md) | 1 class → 145 bean · 2 tầng lọc · `AutoConfiguration.imports` · họ `@Conditional...` · **auto-config tự lùi bước** · starter · transitive dependency + `dependency:tree` · eager vs lazy + fail-fast · đọc CONDITIONS EVALUATION REPORT · daemon vs non-daemon thread |
 | 08 | [Java `record`](08-java-records.md) | transparent carrier · compiler sinh gì · accessor `amount()` vs `getAmount()` · compact constructor · **có thay thế DTO không** · vì sao KHÔNG làm JPA entity · Jackson · Bean Validation · record ≠ bean |
+| 09 | [Proxy & `@Transactional`](09-proxy-and-transactional.md) | proxy là gì · JDK proxy vs CGLIB · **container cất proxy chứ không cất object thật** · ⚠️ bẫy self-invocation (`this.method()` vô hiệu hoá `@Transactional`) · `private`/`final` không proxy được · 3 cách sửa · các annotation khác cùng dính bẫy |
 
 ---
 
@@ -49,7 +50,7 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 
 ## Hàng đợi — khái niệm đã park, sẽ viết note sau
 
-- **Proxy** — trả lời: `@Transactional` mà gọi `this.method()` thì có mở transaction không? *(ưu tiên cao nhất)*
+- `propagation` / `isolation` của `@Transactional` *(Phase 1)*
 - Vòng đời bean đầy đủ: `@PostConstruct`, `@PreDestroy`, `BeanPostProcessor`
 - Các scope khác: `prototype`, `request`, `session`
 - `@Qualifier` / `@Primary` / circular dependency
