@@ -28,7 +28,7 @@ Mục tiêu: **kiến thức mang đi phỏng vấn được**, không phải gh
 | 06 | [Git chuyên nghiệp](06-git-professional.md) | Conventional Commits · atomic commit · Git Flow vs GitHub Flow vs Trunk-Based · merge vs rebase · tag + SemVer · `reset` vs `revert` · `reflog` · `bisect` · branch protection · hooks · release tự động |
 | 07 | [Auto-configuration](07-spring-boot-autoconfiguration.md) | 1 class → 145 bean · 2 tầng lọc · `AutoConfiguration.imports` · họ `@Conditional...` · **auto-config tự lùi bước** · starter · transitive dependency + `dependency:tree` · eager vs lazy + fail-fast · đọc CONDITIONS EVALUATION REPORT · daemon vs non-daemon thread |
 | 08 | [Java `record`](08-java-records.md) | transparent carrier · compiler sinh gì · accessor `amount()` vs `getAmount()` · compact constructor · **có thay thế DTO không** · vì sao KHÔNG làm JPA entity · Jackson · Bean Validation · record ≠ bean |
-| 09 | [Proxy & `@Transactional`](09-proxy-and-transactional.md) | proxy là gì · JDK proxy vs CGLIB · **container cất proxy chứ không cất object thật** · ⚠️ bẫy self-invocation (`this.method()` vô hiệu hoá `@Transactional`) · `private`/`final` không proxy được · 3 cách sửa · các annotation khác cùng dính bẫy |
+| 09 | [Proxy & `@Transactional`](09-proxy-and-transactional.md) | proxy là gì · JDK vs CGLIB · **proxy KHÔNG rollback, database mới rollback** · ThreadLocal giữ Connection · **4 kịch bản đo thật: 3/4 mất tiền không báo lỗi** (không annotation · nuốt exception · checked exception) · self-invocation · `private`/`final` · annotation nào là proxy · A gọi B · ACID · đừng gọi API mạng trong transaction |
 
 ---
 
