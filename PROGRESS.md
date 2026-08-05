@@ -1,116 +1,205 @@
 # PROGRESS — Unified Payment Platform (mentored by "Bridge")
 
 > Sổ tay tiến độ cho các phiên sau bám theo. Cập nhật mỗi khi xong một increment.
-> Cập nhật lần cuối: 2026-06-18
+> **Cập nhật lần cuối: 2026-08-05**
+
+---
+
+## 0. ⚠️ ĐỔI HƯỚNG — đọc trước tiên
+
+Ngày **2026-07-30** project chuyển từ **Python** sang **Java/Spring Boot**.
+
+- **Lý do:** learner đi phỏng vấn và phát hiện mình không giải thích được nền tảng Java (bean, autowire, `==` vs `equals`). Tự mô tả: *"9 năm làm thuần theo bản năng, đọc code rồi bắt chước"*. **Mục tiêu thật của project bây giờ là lấy kiến thức đi phỏng vấn**, không phải hoàn thành platform.
+- **Python: TẠM DỪNG HOÀN TOÀN** (quyết định 2026-08-05). Code cũ giữ nguyên ở `python/`, không xoá, không phát triển tiếp. Quay lại sau khi Java vững.
+- **Không có deadline** → ưu tiên hiểu sâu, xếp topic theo **thứ tự phụ thuộc** thay vì theo tần suất phỏng vấn.
 
 ---
 
 ## 1. Đang ở đâu
 
-- **Phase hiện tại:** Phase 0 — Foundation.
-- **Increment vừa xong:** verify UNIQUE constraint khai hỏa (gửi `r1` lần 2 → 500 `IntegrityError`, idempotency ở DB); dọn import thừa; commit `f8c2e4e`.
-- **▶ RESUME HERE (phiên sau):** Ch.7 Transactions **đã đọc xong** → vào thẳng **Phase 1 — Ledger correctness** (isolation, write skew, `SELECT FOR UPDATE`, + CI GitHub Actions, testcontainers). Kế hoạch đọc theo phase: xem **`READING_PLAN.md`**.
-- **Polish Phase 0 còn nợ (nhẹ, làm lúc nào cũng được):** `response_model` cho output, biến 500→409 cho duplicate, 1 test pytest đầu tiên.
+- **Phase hiện tại:** Phase 0 (Java) — **XONG**.
+- **Increment vừa xong:** demo `@Transactional` với 4 kịch bản, đo thật — 3/4 mất tiền mà không báo lỗi. Commit `ed896e5`.
+- **▶ RESUME HERE:** **Phase 1 — Ledger correctness**. Việc đầu tiên: bật Docker Desktop → `docker compose up -d` → đổi từ H2 sang Postgres thật.
 
-### Trạng thái đọc DDIA
-- Đã đọc: **Ch.6 Partitioning** + **Ch.7 Transactions** ✅ → đủ cho Phase 1.
-- Kế hoạch đọc đầy đủ theo từng phase (DDIA + pattern + system design + Python): **`READING_PLAN.md`**.
-- Lưu ý numbering: Ch.6=Partitioning, Ch.7=Transactions, Ch.8=Distributed troubles (Phase 4), Ch.9=Consensus (Phase 4).
-- **Cổng đã biết bị chiếm:** 8000 = container `infra-app-1` (minifeed); 5432 = container `infra-postgres-1`. Vì thế: app FastAPI ở `--port 8080`, Postgres của ta map host `5433`.
+### Stack đã chốt
 
-### Connection facts (cho SQLAlchemy)
-- Host:port từ máy = **`localhost:5433`** · trong container = `5432`.
-- user / password / db = **`payments` / `payments` / `payments`**.
-- DSN async dự kiến: `postgresql+asyncpg://payments:payments@localhost:5433/payments`.
-- **Repo:** https://github.com/fbnb1/payment-gateway-demo (nhánh `main`).
+| | |
+|---|---|
+| Java | **25 LTS** (Temurin, `C:\Program Files\Eclipse Adoptium\jdk-25.0.4.7-hotspot`) |
+| Spring Boot | **4.1.0** → kéo theo Spring Framework **7.0.x** |
+| Build | Maven wrapper (`.\mvnw.cmd`) — **luôn dùng wrapper**, không dùng `mvn` toàn cục |
+| DB (demo) | **H2 in-memory** — không cần Docker |
+| DB (Phase 1+) | **Postgres 16** qua `compose.yaml` ở gốc repo |
+| Starter | `spring-boot-starter-webmvc` *(Boot 4 đổi tên từ `-web`)*, `-data-jpa` |
 
----
+### Layout repo
 
-## 2. Đã hoàn thành (Done)
+```
+payment system/
+├─ compose.yaml        ← hạ tầng dùng chung (Postgres, host port 5433)
+├─ java/               ← TRACK CHÍNH
+├─ python/             ← tạm dừng, giữ nguyên để đối chiếu
+├─ notes/              ← sổ khái niệm (9 note) — xem notes/README.md
+├─ PROGRESS.md
+└─ READING_PLAN.md
+```
 
-- [x] Đổi `claude.md` → `CLAUDE.md` (portable cho Linux CI/container).
-- [x] `git init` + `.gitignore` cho Python/uv (+ `.claude/`, `.venv/`).
-- [x] `uv init --package --name payments --python 3.12` → `src/payments/`.
-- [x] `uv run payments` → tạo `.venv` + `uv.lock`, chạy `main()`.
-- [x] Sửa tác giả trong `pyproject.toml` (bỏ leftover trading-bot).
-- [x] Commit đầu tiên (amend gộp sửa-author) → `git push -u origin main --force`.
-- [x] Xác minh remote khớp local (`git ls-remote`).
-- [x] App FastAPI tối thiểu (`src/payments/main.py`) + endpoint `GET /health`.
-- [x] Chạy bằng `fastapi dev ... --port 8080`; gỡ lỗi port-conflict (Docker giữ 8000).
-- [x] Pydantic v2: `Currency` Enum + `CreatePaymentRequest` (amount=Decimal, currency=Enum).
-- [x] Endpoint `POST /payments` dùng model → FastAPI tự validate (422 khi input sai).
-- [x] Học sâu **async**: concurrency vs parallelism, I/O- vs CPU-bound, GIL, mapping Java↔Python.
-- [x] Học nền **Docker**: image vs container, registry, port mapping, named volume.
-- [x] `compose.yaml` chạy Postgres 16 (map host 5433); gỡ port-conflict với stack "infra".
-- [x] SQLAlchemy 2.0 async: engine + `async_sessionmaker` + DI `get_session` (`db.py`).
-- [x] ORM `Payment` (`models.py`): PK **UUIDv7** (lib `uuid6`), `request_id` UNIQUE (idempotency ở DB), `amount Numeric(18,2)`, `created_at/updated_at timestamptz`.
-- [x] `POST /payments` ghi thật xuống Postgres (add + await commit); verify 1 hàng trong DB.
+### Connection facts (Phase 1 sẽ cần)
 
----
+- Từ máy: **`localhost:5433`** · trong container: `5432`
+- user / password / db = **`payments` / `payments` / `payments`**
+- JDBC: `jdbc:postgresql://localhost:5433/payments`
+- **Repo:** https://github.com/fbnb1/payment-gateway-demo (nhánh `main`)
 
-## 3. Việc còn lại của Phase 0
+### ⚠️ Bẫy môi trường đã gặp
 
-- [ ] `uv add fastapi` + một app FastAPI tối thiểu, 1 endpoint.
-- [ ] Pydantic v2 models cho request/response.
-- [ ] Postgres qua Docker Compose.
-- [ ] SQLAlchemy 2.0 async + sổ cái single-node (happy path: tạo payment → ghi ledger).
-- [ ] (Skill) Docker Compose chạy app + Postgres.
+- **Cổng 8080 hay bị chiếm** bởi lần chạy trước chưa tắt hẳn. Kiểm tra: `Get-NetTCPConnection -LocalPort 8080 -State Listen`. Chạy cổng khác: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"`.
+- **IntelliJ cache `pom.xml`.** Sửa pom bằng editor ngoài → IntelliJ vẫn báo đỏ. Phải **Reload All Maven Projects**.
+- Cổng 5432 và 8000 đã bị stack "infra" của project khác chiếm → vì thế Postgres map host `5433`.
 
 ---
 
-## 4. Ghi chú "đã học" (knowledge web)
+## 2. Đã hoàn thành (track Java)
+
+- [x] Restructure repo → `java/` + `python/`, `compose.yaml` giữ ở gốc (commit `abfe896`)
+- [x] Scaffold Spring Boot 4.1.0 + Java 25 từ start.spring.io
+- [x] In toàn bộ bean trong container, chứng minh **singleton scope** bằng `==` → `true`
+- [x] Đo auto-configuration: **1 class khai báo → 145 bean**; bỏ starter web → còn **50**
+- [x] Đọc `CONDITIONS EVALUATION REPORT` (`debug=true`)
+- [x] `POST /payments` — `@RestController` + `@Service` + constructor injection, DTO bằng **record**
+- [x] Proxy viết tay 2 lớp để nhìn thấy cơ chế (commit `5dd523c` — đã xoá khỏi code, còn trong git)
+- [x] Thêm JPA + H2, `Account` **entity** (class thường, không record)
+- [x] **Demo `@Transactional` 4 kịch bản** với nhật ký tuyến tính: `GET /demo/run`
+
+### Kết quả demo `/demo/run` (số liệu thật)
+
+| # | Cách viết | TỔNG sau | |
+|---|---|---|---|
+| 1 | không `@Transactional` | 1900.00 | ❌ mất 100 |
+| 2 | có `@Transactional` | 2000.00 | ✅ |
+| 3 | có `@Transactional` + `try/catch` nuốt exception | 1900.00 | ❌ mất 100 |
+| 4 | có `@Transactional` + **checked** exception | 1900.00 | ❌ mất 100 |
+
+> **3/4 mất tiền, cả ba không báo lỗi, HTTP đều 200.**
+
+---
+
+## 3. Sổ khái niệm — `notes/` (9 note)
+
+Quy ước: mỗi khái niệm giải thích xong → một file `notes/NN-*.md` + cập nhật `notes/README.md`.
+Mỗi note có: định nghĩa chuẩn · ví von/sơ đồ · **câu hỏi phỏng vấn** · **còn nợ** · **liên quan**.
+
+| # | Note |
+|---|---|
+| 01 | JVM memory model — stack/heap · `==` vs `equals` · `null` |
+| 02 | Spring IoC container — bean · container là một `Map` · singleton |
+| 03 | Classloader & reflection — cách Spring thật sự hoạt động |
+| 04 | Dependency injection — 4 lý do constructor thắng · `@Autowired` vs `final` |
+| 05 | Stateless & thread safety — singleton + thread = race condition |
+| 06 | Git chuyên nghiệp — Conventional Commits · branch · tag · CI/CD |
+| 07 | Auto-configuration — 2 tầng lọc · `@Conditional...` · eager vs lazy |
+| 08 | Java `record` — thay DTO · vì sao KHÔNG làm entity · wither pattern |
+| 09 | **Proxy & `@Transactional`** — 4 kịch bản · proxy không rollback · self-invocation |
+
+---
+
+## 4. Phase 1 — kế hoạch (RESUME HERE)
+
+**Tên:** Ledger correctness — *tiền phải đúng khi nhiều người cùng chuyển một lúc*.
+
+Vùng mạnh sẵn của learner (DDIA Ch.7 đã đọc xong). Cần **Postgres thật** — H2 không mô phỏng đủ hành vi khoá.
+
+**Các bước dự kiến:**
+
+- [ ] Bật Docker Desktop → `docker compose up -d` → đổi H2 sang Postgres
+- [ ] Thêm Flyway (migration) thay `ddl-auto=create-drop`
+- [ ] Dựng **lost update**: hai transaction cùng đọc số dư rồi cùng ghi → mất một giao dịch
+- [ ] `SELECT FOR UPDATE` — khoá bi quan
+- [ ] Isolation level: `READ COMMITTED` vs `REPEATABLE READ` vs `SERIALIZABLE`
+- [ ] **Write skew** — bất biến bị phá dù không có ghi đè trực tiếp
+- [ ] Bất biến thật: **số dư không bao giờ âm**, kể cả 100 giao dịch đồng thời
+- [ ] `propagation` (`REQUIRED` / `REQUIRES_NEW` / `NESTED`) — park từ Phase 0
+- [ ] (Skill) **CI/CD** — GitHub Actions chạy `mvnw test` trên mỗi PR
+
+---
+
+## 5. Cách dạy đang áp dụng — "Lộ trình B2"
+
+- **Lớp build:** mỗi increment một bước nhỏ, learner tự chạy và tự đo.
+- **Lớp drill:** mỗi increment kèm câu hỏi "tại sao" mức phỏng vấn, rút từ chính code vừa gõ.
+- **Topic lấp lỗ hổng:** mỗi tuần một chủ đề project không chạm tới (`HashMap` internals, GC, JMM…).
+
+**Lưu ý khi mentor:**
+- Learner hay xin đáp án thẳng ("viết luôn cho tôi"). Từ chối nhẹ nhưng **hạ tải bằng trắc nghiệm** — việc *chọn* mới là chỗ học. Riêng boilerplate đã thạo (controller/service) thì viết hộ được, đổi lại bắt **review** và trả lời 5 câu.
+- **Giải thích ngắn thôi.** Learner đã phản hồi "khó hiểu" nhiều lần khi một turn nhồi >3 ý. Một khái niệm một lượt.
+- **Cho nhìn thấy, đừng chỉ nói.** Mọi bước ngoặt đều đến từ số liệu tự đo: 145 bean, `a == b → true`, `real=3 proxy=1`, TỔNG 1900 vs 2000.
+- Ngôn ngữ: **tiếng Việt**; code + thuật ngữ kỹ thuật giữ tiếng Anh.
+
+---
+
+## 6. Đã học được gì (knowledge web)
 
 | Chủ đề | Ý chính đã nắm |
 |---|---|
-| uv vs Maven | uv = build tool + venv + lockfile gộp một; `pyproject.toml` ≈ `pom.xml` |
-| `pyproject.toml` (PEP 621) | `[project]` metadata+deps · `requires-python` ghim runtime · `[project.scripts]` entry point · `[build-system]` backend |
-| src vs flat layout | **src layout** = test chạy trên code đã-cài → bắt lỗi đóng gói sớm; chọn cho service deploy |
-| Console entry point | `payments = "payments:main"` → lệnh `payments` gọi `main()` trong package |
-| Lockfile policy | **application/service → commit `uv.lock`** (tái lập byte-for-byte); library thì thường không |
-| `pyproject` = ý định, `uv.lock` = sự thật đã giải | thêm deps bằng `uv add`, không sửa tay |
-| Git: amend | chỉ amend commit **chưa push**; `--amend --no-edit` gộp staged vào commit gần nhất |
-| Git: lịch sử rời | remote có lịch sử khác → merge `--allow-unrelated-histories` (an toàn) **hoặc** `push --force` (repo cá nhân) |
+| Bean vs object dữ liệu | bean *làm việc* (một cái, stateless) · record *chở dữ liệu* (nhiều cái, bất biến) |
+| Container | chỉ là `Map<String,Object>`; khởi động 2 pha: definition → instantiation |
+| Auto-configuration | 2 tầng lọc: có phải ứng viên (classpath) → điều kiện `@Conditional...` |
+| `@ConditionalOnMissingBean` | bạn khai bean → auto-config **tự lùi**, không phải "ghi đè" |
+| Proxy | container cất **proxy**, không cất object thật; `this` không đi qua proxy |
+| `@Transactional` | **không tự hoàn tác** — chỉ bật/tắt `autoCommit`, database mới rollback |
+| Bốn kiểu mất tiền im lặng | thiếu annotation · self-invocation · nuốt exception · checked exception |
+| ThreadLocal | cách proxy gắn 1 Connection cho mọi DAO trong cùng thread |
+| Eager vs lazy | classloader **lazy**, bean singleton **eager** → fail-fast |
+| Record vs entity | entity cần no-arg ctor + mutable + không `final` → record chặn cả ba |
 
 ### "Java-ism" đã được nhắc chỉnh
-- Bỏ `utils` grab-bag; hàm tự do sống trong module domain của nó.
-- Không dựng sẵn "củ hành" nhiều tầng (infra/business/adapter) khi chưa có logic — cấu trúc mọc theo nhu cầu. (Park lại cho Phase 3–4.)
+- Vòng lặp `for` thủ công → `Arrays.stream().filter().forEach()` + method reference
+- POJO 40 dòng có getter/setter → `record` 1 dòng
+- `@Autowired` trên field → constructor injection, không cần annotation
+- Tưởng `final` là lý do bỏ được `@Autowired` → **hai thứ độc lập hoàn toàn**
 
 ---
 
-## 5. Câu hỏi mở / Park lại
+## 7. Park lại — sẽ quay lại
 
-- Phân lớp hexagonal (infra/business/adapter) → kích hoạt lại ở Phase 3–4.
-- Cảnh báo `Failed to hardlink` của uv (cache ổ C, project ổ D) — vô hại; muốn tắt: `UV_LINK_MODE=copy`.
-- 3 probe đang chờ học: lệnh `uv add`, ASGI server cho FastAPI, `async def` cơ bản.
+- `propagation` / `isolation` chi tiết → **Phase 1**
+- Vòng đời bean: `@PostConstruct`, `@PreDestroy`, `BeanPostProcessor`
+- Scope khác: `prototype`, `request`, `session`
+- `@Qualifier` / `@Primary` / circular dependency
+- Hợp đồng `equals`/`hashCode` · `Integer` cache −128..127
+- Collections internals: `HashMap` bên trong
+- `synchronized` · `volatile` · Java Memory Model · `ThreadLocal` · virtual threads
+- `@EnableAutoConfiguration` tự viết cho thư viện riêng
+- Python: quay lại sau khi Java vững
 
 ---
 
-## 6. Thước đo tiến độ (ước lượng thô)
+## 8. Thước đo tiến độ (ước lượng thô)
 
-### % build project end-to-end
-**~3%** — mới có scaffold + repo. Còn cả 5 subsystem (orchestrator, ledger, saga, reconciliation, event-sourcing) + PSP simulator.
-
-```
-[#·····················] 3%
-```
-
-### % hoàn thành Phase 0
-**~90%** — lõi happy-path xong + verify idempotency constraint. Còn polish: response_model, 500→409, vài test, (tuỳ chọn) Dockerfile cho app.
+### % build platform end-to-end
+**~5%** — Phase 0 xong (API + entity + transaction). Còn 5 subsystem + PSP simulator.
 
 ```
-[##################··] 90%
+[#·····················] 5%
 ```
 
-### % đã học theo kỹ năng
+### % nền tảng Java/Spring cho phỏng vấn
+**~35%** — container/DI/proxy/transaction đã vững và **chứng minh được bằng số liệu tự đo**.
+Còn: concurrency (JMM, `synchronized`, virtual threads), collections internals, JVM/GC, JPA sâu, testing.
+
+```
+[#######···············] 35%
+```
+
 | Kỹ năng | % | Ghi chú |
 |---|---|---|
-| Git chuyên nghiệp | ~35% | đã: init, commit, amend, remote, force-push, unrelated histories. Còn: branching, PR, rebase workflow |
-| uv / packaging Python | ~40% | đã: init, run, layout, lockfile. Còn: `uv add`, dependency groups, build/publish |
-| Python ngôn ngữ (type hints, async, Pydantic) | ~30% | đã: type hints, Pydantic v2, `async with`/`await` thực hành, async generator (DI), context manager. Còn: decorators, generics, Protocol |
-| SQLAlchemy 2.0 async | ~25% | đã: engine/pool, `async_sessionmaker`, DI session, typed ORM (`Mapped`/`mapped_column`), `create_all`/`run_sync`, add+commit, UUIDv7 PK. Còn: query/select, relationship, Alembic, isolation |
-| FastAPI / gRPC | ~20% | đã: app instance, `@app.get`/`@app.post`, async endpoint, body model auto-validate (422), Swagger `/docs`, `fastapi dev`. Còn: path/query params, response_model, DI, gRPC |
-| Docker / Compose | ~25% | đã: image/container, port mapping, named volume, `compose up/down/ps/logs/exec`, disk mgmt. Còn: Dockerfile build app, multi-service deps, healthcheck |
-| Kubernetes / CI-CD | 0% | Phase 1+ |
-| DDIA / distributed systems | 0% | Phase 1+ (vùng mạnh sẵn của learner) |
+| Spring core (IoC/DI/bean/proxy) | ~70% | đã: container, scan, auto-config, DI, proxy, `@Transactional`. Còn: lifecycle, scope, `@Qualifier`, tự viết aspect |
+| Java ngôn ngữ | ~30% | đã: record, stream cơ bản, `final`, `==` vs `equals`, kế thừa/override. Còn: generics, collections internals, concurrency, `Optional` |
+| JPA / Hibernate | ~15% | đã: entity, repository, `@Transactional`. Còn: quan hệ, lazy loading, N+1, Flyway, query |
+| Git chuyên nghiệp | ~55% | đã: note 06 đầy đủ + Conventional Commits thực hành. Còn: branch/PR workflow thật, tag, hooks |
+| Docker / Compose | ~25% | `compose.yaml` sẵn nhưng **chưa chạy lần nào ở track Java** |
+| CI/CD | 0% | Phase 1 |
+| Kubernetes | 0% | Phase 6 |
+| DDIA / distributed systems | — | Ch.6 + Ch.7 đã đọc; **Phase 1 mới bắt đầu áp dụng** |
 
-> Lưu ý: learner đã có ~9 năm backend (Java/.NET, payment domain, Kafka, SQL, DDD/EDA) — các % "đã học" trên chỉ tính phần **Python/tooling mới**, không phản ánh năng lực nền đã vững.
+> Các % trên chỉ tính phần **giải thích được / chứng minh được**, không tính kinh nghiệm 9 năm sẵn có về payment domain, SQL, Kafka, DDD/EDA.
