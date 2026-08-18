@@ -27,6 +27,10 @@
 		<url/>
 	</scm>
 	<properties>
+		<!-- Postgres 16 khong biet "Asia/Saigon" (tzdata da bo alias nay).
+		     JVM gui timezone luc connect -> FATAL -> khong lay duoc metadata.
+		     UTC cung la lua chon dung cho he thong thanh toan. -->
+		<argLine>-Duser.timezone=UTC</argLine>
 		<java.version>25</java.version>
 	</properties>
 	<dependencies>
@@ -47,6 +51,12 @@
 		</dependency>
 
 		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
+
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
@@ -58,6 +68,9 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<configuration>
+					<jvmArguments>-Duser.timezone=UTC</jvmArguments>
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
