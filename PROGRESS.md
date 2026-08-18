@@ -1,7 +1,7 @@
 # PROGRESS — Unified Payment Platform (mentored by "Bridge")
 
 > Sổ tay tiến độ cho các phiên sau bám theo. Cập nhật mỗi khi xong một increment.
-> **Cập nhật lần cuối: 2026-08-05**
+> **Cập nhật lần cuối: 2026-08-18**
 
 ---
 
@@ -17,9 +17,9 @@ Ngày **2026-07-30** project chuyển từ **Python** sang **Java/Spring Boot**.
 
 ## 1. Đang ở đâu
 
-- **Phase hiện tại:** Phase 0 (Java) — **XONG**.
-- **Increment vừa xong:** demo `@Transactional` với 4 kịch bản, đo thật — 3/4 mất tiền mà không báo lỗi. Commit `ed896e5`.
-- **▶ RESUME HERE:** **Phase 1 — Ledger correctness**. Việc đầu tiên: bật Docker Desktop → `docker compose up -d` → đổi từ H2 sang Postgres thật.
+- **Phase hiện tại:** Phase 1 — Ledger correctness. Đang chạy.
+- **Increment vừa xong:** đã chuyển sang **Postgres thật** và **dựng được test đỏ tái lập lost update** (`LostUpdateTest`). 100 thread rút 1.00 từ 1000.00 → còn ~989 thay vì 900.
+- **▶ RESUME HERE:** **chống lost update**. Thử lần lượt 4 cách (bảng ở mục 4), mỗi cách một commit, so giá phải trả.
 
 ### Stack đã chốt
 
@@ -28,8 +28,7 @@ Ngày **2026-07-30** project chuyển từ **Python** sang **Java/Spring Boot**.
 | Java | **25 LTS** (Temurin, `C:\Program Files\Eclipse Adoptium\jdk-25.0.4.7-hotspot`) |
 | Spring Boot | **4.1.0** → kéo theo Spring Framework **7.0.x** |
 | Build | Maven wrapper (`.\mvnw.cmd`) — **luôn dùng wrapper**, không dùng `mvn` toàn cục |
-| DB (demo) | **H2 in-memory** — không cần Docker |
-| DB (Phase 1+) | **Postgres 16** qua `compose.yaml` ở gốc repo |
+| DB | **Postgres 16** qua `compose.yaml` (từ 2026-08-18). H2 vẫn còn trong pom, chưa dùng |
 | Starter | `spring-boot-starter-webmvc` *(Boot 4 đổi tên từ `-web`)*, `-data-jpa` |
 
 ### Layout repo
@@ -56,6 +55,8 @@ payment system/
 - **Cổng 8080 hay bị chiếm** bởi lần chạy trước chưa tắt hẳn. Kiểm tra: `Get-NetTCPConnection -LocalPort 8080 -State Listen`. Chạy cổng khác: `.\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--server.port=8081"`.
 - **IntelliJ cache `pom.xml`.** Sửa pom bằng editor ngoài → IntelliJ vẫn báo đỏ. Phải **Reload All Maven Projects**.
 - Cổng 5432 và 8000 đã bị stack "infra" của project khác chiếm → vì thế Postgres map host `5433`.
+- **`FATAL: invalid value for parameter "TimeZone": "Asia/Saigon"`.** JVM gửi timezone lúc connect; Postgres 16 (tzdata mới) không còn alias `Asia/Saigon`. Kết nối bị từ chối → Hibernate không lấy được metadata → báo nhầm thành `Unable to determine Dialect`. **Đã cố định:** `-Duser.timezone=UTC` trong `pom.xml` (surefire `argLine` + `spring-boot-maven-plugin` `jvmArguments`).
+- **`mvnw.cmd` vỡ khi `-D...` chứa dấu cách** (vì đường dẫn repo có khoảng trắng). Truyền config qua **biến môi trường** thay vì `-DargLine`: `SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE=50`.
 
 ---
 
@@ -81,6 +82,19 @@ payment system/
 | 4 | có `@Transactional` + **checked** exception | 1900.00 | ❌ mất 100 |
 
 > **3/4 mất tiền, cả ba không báo lỗi, HTTP đều 200.**
+
+### Kết quả `LostUpdateTest` — lost update (số liệu thật)
+
+Số dư đầu **1000.00**, 100 thread mỗi thread rút **1.00**. Đúng phải còn **900.00**.
+
+| `hikari.maximum-pool-size` | số dư cuối | lệnh sống sót |
+|---|---|---|
+| 5 | 982.00 | 18 |
+| 10 (mặc định) | 989.00 | 11 |
+| 50 | 996.00 | 4 |
+
+> **Càng nhiều connection càng mất nhiều tiền.** Không phải số thread quyết định thiệt hại, mà là **số transaction chạy song song**. Tăng pool để "chịu tải" = làm bug nặng thêm.
+> Cả 100 transaction đều commit thành công, 0 exception. `@Transactional` làm đúng việc của nó — hỏng là **isolation**, không phải transaction.
 
 ---
 
@@ -111,10 +125,10 @@ Vùng mạnh sẵn của learner (DDIA Ch.7 đã đọc xong). Cần **Postgres 
 
 **Các bước dự kiến:**
 
-- [ ] Bật Docker Desktop → `docker compose up -d` → đổi H2 sang Postgres
+- [x] Bật Docker Desktop → `docker compose up -d` → đổi H2 sang Postgres
 - [ ] Thêm Flyway (migration) thay `ddl-auto=create-drop`
-- [ ] Dựng **lost update**: hai transaction cùng đọc số dư rồi cùng ghi → mất một giao dịch
-- [ ] `SELECT FOR UPDATE` — khoá bi quan
+- [x] **Dựng lost update** — `LostUpdateTest`: 100 thread + `CountDownLatch` làm cổng xuất phát → test ĐỎ, tái lập được mỗi lần chạy
+- [ ] Chống, thử đủ 4 cách: `SELECT FOR UPDATE` · atomic `UPDATE ... SET x = x - ?` · `@Version` · nâng isolation
 - [ ] Isolation level: `READ COMMITTED` vs `REPEATABLE READ` vs `SERIALIZABLE`
 - [ ] **Write skew** — bất biến bị phá dù không có ghi đè trực tiếp
 - [ ] Bất biến thật: **số dư không bao giờ âm**, kể cả 100 giao dịch đồng thời
