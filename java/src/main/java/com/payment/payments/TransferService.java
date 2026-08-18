@@ -86,7 +86,9 @@ public class TransferService {
      */
     @Transactional
     public void withdraw(String id, BigDecimal amount) {
-        Account a = accounts.findById(id).orElseThrow();
+        // findWithLockById -> SELECT ... FOR UPDATE: ai den sau phai CHO,
+        // va khi tinh day thi DOC LAI gia tri moi nhat (READ COMMITTED).
+        Account a = accounts.findWithLockById(id).orElseThrow();
         a.debit(amount);
         accounts.save(a);
     }
