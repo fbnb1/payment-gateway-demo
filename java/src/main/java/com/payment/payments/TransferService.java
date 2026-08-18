@@ -31,7 +31,7 @@ public class TransferService {
         log.ghi("VAO  transferWithoutTransaction(" + fromId + " -> " + toId + ", " + amount + ")");
         log.ghi("     KHONG co @Transactional  ->  proxy khong mo transaction nao");
         log.ghi("     ==> moi lenh ghi TU COMMIT ngay lap tuc (autocommit = true)");
-        chuyenTien(fromId, toId, amount);
+        performTransfer(fromId, toId, amount);
     }
 
     // ─── 2. CO @Transactional ────────────────────────────────────
@@ -40,7 +40,7 @@ public class TransferService {
         log.ghi("VAO  transferWithTransaction(" + fromId + " -> " + toId + ", " + amount + ")");
         log.ghi("     CO @Transactional  ->  proxy da goi setAutoCommit(false)");
         log.ghi("     ==> moi lenh ghi CHO, chi thuc su luu khi commit");
-        chuyenTien(fromId, toId, amount);
+        performTransfer(fromId, toId, amount);
     }
 
     // ─── 3. CO @Transactional NHUNG nuot exception ───────────────
@@ -50,7 +50,7 @@ public class TransferService {
         log.ghi("     CO @Transactional  ->  proxy da goi setAutoCommit(false)");
         log.ghi("     NHUNG ben trong co try/catch bat loi va KHONG nem lai");
         try {
-            chuyenTien(fromId, toId, amount);
+            performTransfer(fromId, toId, amount);
         } catch (RuntimeException e) {
             log.ghi("     >>> try/catch BAT duoc: " + e.getMessage());
             log.ghi("     >>> chi log ra roi DI TIEP, khong nem lai");
@@ -75,15 +75,27 @@ public class TransferService {
         accounts.save(from);
         log.ghi("     accounts.save(\"" + fromId + "\")       -> gui UPDATE xuong database");
 
-        log.ghi("     goi neSuCoChecked()  <-- cho sap no");
-        neSuCoChecked();
+        log.ghi("     goi throwCheckedPspFailure()  <-- cho sap no");
+        throwCheckedPspFailure();
+    }
+
+    // ─── Phase 1: rut tien BINH THUONG, khong su co ──────────────
+    /**
+     * Doc - tinh trong JVM - ghi lai. Day la hinh dang cua MOI lost update.
+     * Khong exception, khong try/catch: cai sai (neu co) chi den tu DONG THOI.
+     */
+    @Transactional
+    public void withdraw(String id, BigDecimal amount) {
+        Account a = accounts.findById(id).orElseThrow();
+        a.debit(amount);
+        accounts.save(a);
     }
 
     /**
      * Phan nghiep vu that su — dung chung cho kich ban 1, 2, 3
      * de chac chan khong co khac biet nao ngoai cai annotation / try-catch.
      */
-    private void chuyenTien(String fromId, String toId, BigDecimal amount) {
+    private void performTransfer(String fromId, String toId, BigDecimal amount) {
 
         Account from = accounts.findById(fromId).orElseThrow();
         log.ghi("     accounts.findById(\"" + fromId + "\")   -> so du " + from.getBalance());
@@ -94,8 +106,8 @@ public class TransferService {
         accounts.save(from);
         log.ghi("     accounts.save(\"" + fromId + "\")       -> gui UPDATE xuong database");
 
-        log.ghi("     goi neSuCoTuPSP()  <-- cho sap no");
-        neSuCoTuPSP();
+        log.ghi("     goi throwPspFailure()  <-- cho sap no");
+        throwPspFailure();
 
         // ── tu day tro xuong KHONG BAO GIO chay ──
         Account to = accounts.findById(toId).orElseThrow();
@@ -104,12 +116,12 @@ public class TransferService {
     }
 
     /** Su co dang UNCHECKED — Spring rollback voi loai nay. */
-    private void neSuCoTuPSP() {
+    private void throwPspFailure() {
         throw new IllegalStateException("PSP timeout giua chung!");
     }
 
     /** Su co dang CHECKED — Spring KHONG rollback voi loai nay. */
-    private void neSuCoChecked() throws Exception {
+    private void throwCheckedPspFailure() throws Exception {
         throw new Exception("PSP timeout (checked exception)!");
     }
 }
